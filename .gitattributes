@@ -1,14 +1,7 @@
 # Enforce LF line endings for all text files
 * text=auto eol=lf
 
-# Git LFS tracking for binary/media files
-*.gif filter=lfs diff=lfs merge=lfs -text
-*.mp4 filter=lfs diff=lfs merge=lfs -text
-
-# Visual regression baseline snapshots
-packages/kilo-ui/tests/**/*.png filter=lfs diff=lfs merge=lfs -text
-packages/kilo-vscode/tests/**/*.png filter=lfs diff=lfs merge=lfs -text
-packages/kilo-docs/public/img/screenshot-tests/**/*.png filter=lfs diff=lfs merge=lfs -text
+# Git LFS tracking for binary/media files deleted because of 404 missing LFS uploads on fork repo
 
 # Hide non-English localization files by default in GitHub PR diffs.
 **/i18n/*.ts linguist-generated=true
