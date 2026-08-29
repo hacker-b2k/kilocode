@@ -76,3 +76,6 @@ packages/*/.kilo/tui.jsonc
 # Test Artifacts
 packages/app/.artifacts/
 packages/opencode/.artifacts/
+
+# Local build output
+packages/kilo-vscode/*.vsix
