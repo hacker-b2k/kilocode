@@ -1579,6 +1579,20 @@ export const layer = Layer.effect(
         }
 
         if (task?.type === "compaction") {
+          // kilocode_change start - count every compaction attempt, including
+          // failed ones, so guardCompactionAttempt can cap the loop when a weak
+          // provider keeps failing the summary LLM call.
+          const guard = KiloSessionPrompt.guardCompactionAttempt({
+            sessionID,
+            attempts: compactionAttempts,
+            closeReasons,
+          })
+          if (guard.exhausted) {
+            yield* events.publish(Session.Event.Error, { sessionID, error: guard.error })
+            break
+          }
+          compactionAttempts++
+          // kilocode_change end
           const result = yield* compaction.process({
             messages: msgs,
             parentID: lastUser.id,
@@ -1615,8 +1629,9 @@ export const layer = Layer.effect(
             yield* events.publish(Session.Event.Error, { sessionID, error: guard.error })
             break
           }
-          compactionAttempts++
-          // kilocode_change end
+          // kilocode_change end - attempt counting moved to the compaction task
+          // path so every compaction.process() invocation (success or failure)
+          // counts exactly once.
           yield* compaction.create({ sessionID, agent: lastUser.agent, model: lastUser.model, auto: true })
           continue
         }
@@ -1850,8 +1865,9 @@ export const layer = Layer.effect(
               yield* events.publish(Session.Event.Error, { sessionID, error: guard.error })
               return "break" as const
             }
-            compactionAttempts++
-            // kilocode_change end
+            // kilocode_change end - attempt counting moved to the compaction task
+            // path so every compaction.process() invocation (success or failure)
+            // counts exactly once.
             yield* compaction.create({
               sessionID,
               agent: lastUser.agent,

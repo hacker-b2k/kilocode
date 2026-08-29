@@ -27,6 +27,16 @@ export namespace KiloSessionProcessor {
   export const INCOMPLETE_RESPONSE_RETRIES = 2
   export const INCOMPLETE_RESPONSE_MESSAGE =
     "The provider repeatedly ended the response before returning usable output."
+  // kilocode_change start - bound provider retries for compaction (summary) LLM calls
+  /**
+   * Default provider retry cap for compaction (summary) LLM calls when
+   * KILO_SESSION_RETRY_LIMIT is unset. Compaction requests replay the whole
+   * conversation, so weak/unhealthy providers fail on them repeatedly; without
+   * a cap the retry loop spins forever and the chat shows the same retry
+   * message over and over. Bounded retries surface a real error instead.
+   */
+  export const COMPACTION_RETRY_LIMIT = 2
+  // kilocode_change end
   export class IncompleteResponseError extends Error {
     constructor(readonly vercelID?: string) {
       super(INCOMPLETE_RESPONSE_MESSAGE)
@@ -201,14 +211,30 @@ export namespace KiloSessionProcessor {
    *
    * The `abort` signal is used by the offline handler to cancel the network
    * reconnection wait when the session is interrupted.
+   *
+   * kilocode_change start - bound compaction retries
+   * `summary` messages are compaction (summary) LLM calls. When the env flag
+   * is unset they fall back to COMPACTION_RETRY_LIMIT instead of unlimited
+   * retries, so a weak provider fails fast with a visible error instead of
+   * looping forever on the same oversized compaction request.
+   * kilocode_change end
    */
   export function retryOpts(input: {
     sessionID: SessionID
     abort: AbortSignal
     set: (sessionID: SessionID, status: SessionStatus.Info) => Effect.Effect<void>
     used?: number
+    summary?: boolean
   }) {
-    const limit = Flag.KILO_SESSION_RETRY_LIMIT
+    const flag = Flag.KILO_SESSION_RETRY_LIMIT
+    // kilocode_change start - bound compaction retries
+    const limit =
+      flag !== undefined
+        ? flag
+        : input.summary
+          ? COMPACTION_RETRY_LIMIT
+          : undefined
+    // kilocode_change end
     return {
       limit: limit === undefined ? undefined : Math.max(0, limit - (input.used ?? 0)),
       offline: (info: { error: unknown; message: string }) =>

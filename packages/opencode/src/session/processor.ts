@@ -972,6 +972,7 @@ const layer = Layer.effect(
                     abort: ac.signal,
                     set: status.set,
                     used: retries.provider,
+                    summary: ctx.assistantMessage.summary, // kilocode_change - bound compaction retries
                   }),
                   set: (info) => {
                     if (info.attempt > 0) retries.provider += 1
